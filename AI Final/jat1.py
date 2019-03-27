@@ -102,28 +102,15 @@ def recognise():
     sampleNum = 0
     folder = '0'
     font = cv2.FONT_HERSHEY_DUPLEX
-    """while (True):
-        ret, frame = camera.read()
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        faces = facecascade.detectMultiScale(gray, 1.3, 5)
-        for (x, y, w, h) in faces:
-            sampleNum = sampleNum + 1
-            img = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
-            folder,conf = rec.predict(gray[y:y + h, x:x + w])
-            cv2.putText(frame, str(folder), (x, y + h), font, 2, 255)
-            f = cv2.resize(gray[y:y + h, x:x + h], (500, 500))
-        cv2.imshow("camera", frame)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break"""
+    conf=0
     ret,frame=camera.read()
     gray=cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     faces = facecascade.detectMultiScale(gray, 1.3, 5)
     for(x,y,w,h) in faces:
-        while(folder=='0'):
+        while(folder=='0' and conf<40.0):
             img = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
             folder,conf = rec.predict(gray[y:y + h, x:x + w])
-            print(folder)
-    """print(str(folder))"""
+            print(folder," - ",conf)
     camera.release()
     cv2.destroyAllWindows()
     return(str(folder))
@@ -150,8 +137,8 @@ def recognise1():
             sampleNum = sampleNum + 1
             img = cv2.rectangle(frame, (x, y), (x + w, y + h), (255, 0, 0), 2)
             folder,conf = rec.predict(gray[y:y + h, x:x + w])
-            cv2.putText(frame, str(folder), (x, y + h), font, 2, 255)
-            f = cv2.resize(gray[y:y + h, x:x + h], (500, 500))
+            cv2.putText(frame, str(folder)+"  "+str(conf), (x, y + h), font, 2, 255)
+            f = cv2.resize(gray[y:y + h, x:x + h], (1000, 1000))
         cv2.imshow("camera", frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -159,6 +146,12 @@ def recognise1():
     cv2.destroyAllWindows()
 
 
+def readd():
+    paragraphs = []
+    datasetFile = open("dataset/943.txt","r")
+    for para in datasetFile.readlines():
+        if(len(para.strip()) > 0):
+            paragraphs.append(para.strip())
 
 
 def main():
@@ -166,9 +159,11 @@ def main():
     #trainer()
     name=recognise()
     #datafile=input("Input Data File Name : ")
-    datasetName="dataset/"+name+".txt"
-    print(datasetName)
-
+    try:
+        datasetName="dataset/"+name+".txt"
+        print(datasetName)
+    except FileNotFoundError:
+        print("Bot> Oops! I am unable to locate \"" + datasetName + "\"")
 
     print("Bot> Hey! I am ready. Ask me factoid based questions only :P")
     print("Bot> You can say me Bye anytime you want")
@@ -184,12 +179,17 @@ def main():
                 datasetFile = open(datasetName,"r")
             except FileNotFoundError:
                 print("Bot> Oops! I am unable to locate \"" + datasetName + "\"")
+                datasetFile = open("dataset/1.txt","r")
                 #exit()
             paragraphs = []
-            for para in datasetFile.readlines():
-                if(len(para.strip()) > 0):
-                    paragraphs.append(para.strip())
-            drm = DRM(paragraphs,True,True)
+            try:
+                for para in datasetFile.readlines():
+                    if(len(para.strip()) > 0):
+                        paragraphs.append(para.strip())
+                drm = DRM(paragraphs,True,True)
+            except:
+                print("Bot> Oops! Error in reading dataset")
+                continue
             userQuery = input("You> ")
             if(not len(userQuery)>0):
                 print("Bot> You need to ask something")
@@ -210,14 +210,22 @@ def main():
             elif userQuery.strip().lower() == "detect faces":
                 recognise1()
             elif userQuery.strip().lower() == "speech":
-                userQuery=get_audio()
-                print(name," said : ",userQuery)
-                pq=PQ(userQuery,True,False,True)
-                response=drm.query(pq)
+                try:
+                    userQuery=get_audio()
+                except:
+                    print("Error Recognizing Audio")
+                    continue
+                print("User Said : ",userQuery)
+                if greetPattern.findall(userQuery):
+                    response="Hello!"
+                else:
+                    print(name," said : ",userQuery)
+                    pq=PQ(userQuery,True,False,True)
+                    response=drm.query(pq)
             else:
                 pq = PQ(userQuery,True,False,True)
                 response =drm.query(pq)
             print("Bot>",response)
 
 if __name__=="__main__":
-    main()
+    readd()
